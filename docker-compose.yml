@@ -1,0 +1,34 @@
+version: "3.7"
+services:
+  config-server:
+    build: ./config-server
+    platform: linux/amd64
+    restart: always
+    ports:
+      - 8088:8088
+
+  order-service:
+    build: ./order-service
+    platform: linux/amd64
+    restart: always
+    ports:
+      - 8082:8082
+    depends_on:
+      - service-registry
+
+  product-service:
+    build: ./product-service
+    platform: linux/amd64
+    restart: always
+    ports:
+      - 8081:8081
+    depends_on:
+      - service-registry
+
+  service-registry:
+    build: ./service-registry
+    platform: linux/amd64
+    restart: always
+    ports:
+      - 8761:8761    
+       
