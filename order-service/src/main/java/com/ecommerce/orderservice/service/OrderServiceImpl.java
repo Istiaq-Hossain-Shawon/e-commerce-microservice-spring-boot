@@ -1,6 +1,9 @@
 package com.ecommerce.orderservice.service;
 
+import com.ecommerce.orderservice.exception.CustomException;
+import com.ecommerce.orderservice.external.client.PaymentService;
 import com.ecommerce.orderservice.external.client.ProductService;
+import com.ecommerce.orderservice.external.request.PaymentRequest;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -22,6 +25,9 @@ public class OrderServiceImpl implements OrderService {
     @Autowired
     private OrderRepository orderRepository;
 
+    @Autowired
+    private PaymentService paymentService;
+
     @Override
     public long placeOrder(OrderRequest orderRequest) {
 
@@ -42,14 +48,35 @@ public class OrderServiceImpl implements OrderService {
 
         orderRepository.save(order);
 
+        log.info("Calling Payment Service to complete the payment");
+        PaymentRequest paymentRequest
+                = PaymentRequest.builder()
+                .orderId(order.getId())
+                .paymentMode(orderRequest.getPaymentMode())
+                .amount(orderRequest.getTotalAmount())
+                .build();
+
+        String orderStatus = null;
+        try {
+            paymentService.doPayment(paymentRequest);
+            log.info("Payment done Successfully. Changing the Oder status to PLACED");
+            orderStatus = "PLACED";
+        } catch (Exception e) {
+            log.error("Error occurred in payment. Changing order status to PAYMENT_FAILED");
+            orderStatus = "PAYMENT_FAILED";
+        }
+
+        order.setOrderStatus(orderStatus);
+        orderRepository.save(order);
+
         log.info("Order Places successfully with Order Id: {}", order.getId());
         return order.getId();
     }
 
     @Override
     public OrderResponse getOrderDetails(long orderId) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getOrderDetails'");
+        return null;
     }
+
 
 }
