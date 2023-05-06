@@ -1,5 +1,7 @@
 package com.ecommerce.orderservice.service;
 
+import com.ecommerce.orderservice.dto.PaymentResponse;
+import com.ecommerce.orderservice.dto.ProductResponse;
 import com.ecommerce.orderservice.exception.CustomException;
 import com.ecommerce.orderservice.external.client.PaymentService;
 import com.ecommerce.orderservice.external.client.ProductService;
@@ -27,6 +29,9 @@ public class OrderServiceImpl implements OrderService {
 
     @Autowired
     private PaymentService paymentService;
+
+    @Autowired
+    private RestTemplate restTemplate;
 
     @Override
     public long placeOrder(OrderRequest orderRequest) {
@@ -75,7 +80,55 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public OrderResponse getOrderDetails(long orderId) {
-        return null;
+        log.info("Get order details for Order Id : {}", orderId);
+
+        Order order
+                = orderRepository.findById(orderId)
+                .orElseThrow(() -> new CustomException("Order not found for the order Id:" + orderId,
+                        "NOT_FOUND",
+                        404));
+
+        log.info("Invoking Product service to fetch the product for id: {}", order.getProductId());
+        ProductResponse productResponse
+                = restTemplate.getForObject(
+                "http://product-service/product/" + order.getProductId(),
+                ProductResponse.class
+        );
+
+        log.info("Getting payment information form the payment Service");
+        PaymentResponse paymentResponse
+                = restTemplate.getForObject(
+                "http://payment-service/payment/order/" + order.getId(),
+                PaymentResponse.class
+        );
+
+        OrderResponse.ProductDetails productDetails
+                = OrderResponse.ProductDetails
+                .builder()
+                .productName(productResponse.getProductName())
+                .productId(productResponse.getProductId())
+                .build();
+
+        OrderResponse.PaymentDetails paymentDetails
+                = OrderResponse.PaymentDetails
+                .builder()
+                .paymentId(paymentResponse.getPaymentId())
+                .paymentStatus(paymentResponse.getStatus())
+                .paymentDate(paymentResponse.getPaymentDate())
+                .paymentMode(paymentResponse.getPaymentMode())
+                .build();
+
+        OrderResponse orderResponse
+                = OrderResponse.builder()
+                .orderId(order.getId())
+                .orderStatus(order.getOrderStatus())
+                .amount(order.getAmount())
+                .orderDate(order.getOrderDate())
+                .productDetails(productDetails)
+                .paymentDetails(paymentDetails)
+                .build();
+
+        return orderResponse;
     }
 
 
