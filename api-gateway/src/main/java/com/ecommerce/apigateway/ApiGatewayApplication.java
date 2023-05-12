@@ -16,6 +16,7 @@ import reactor.core.publisher.Mono;
 
 @SpringBootApplication
 @EnableEurekaClient
+
 public class ApiGatewayApplication {
 
 	public static void main(String[] args) {
